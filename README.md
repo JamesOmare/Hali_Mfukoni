@@ -1,79 +1,102 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# Hali Mfukoni 💚
 
-# Getting Started
+**The open-source M-Pesa budget planner for Android.**
 
->**Note**: Make sure you have completed the [React Native - Environment Setup](https://reactnative.dev/docs/environment-setup) instructions till "Creating a new application" step, before proceeding.
+Hali Mfukoni ("wallet status" in Swahili) automatically reads your M-Pesa SMS messages and turns them into a clear picture of your finances — how much you've spent, received, and owe on Fuliza. No accounts. No subscriptions. No internet required.
 
-## Step 1: Start the Metro Server
+---
 
-First, you will need to start **Metro**, the JavaScript _bundler_ that ships _with_ React Native.
+## What it does
 
-To start Metro, run the following command from the _root_ of your React Native project:
+- **Automatic transaction tracking** — scans your M-Pesa SMS inbox and parses every transaction: send money, receive money, withdraw, buy goods (till), pay bill, airtime, and Fuliza overdraft
+- **Balance at a glance** — always shows your current M-Pesa balance. If your balance is zero and you owe Fuliza, the outstanding amount appears in red right alongside it
+- **Daily, weekly & monthly budgets** — set spending limits and track progress against them in real time
+- **Category tagging** — transactions are automatically categorised (food, transport, utilities, shopping, etc.) with smart merchant rules you can customise
+- **Stats & charts** — bar charts, donut breakdowns, and a spend-flow view so you can see exactly where your money goes
+- **Streak tracking & trophies** — stay motivated with streaks for hitting daily goals and badges for milestones
+- **Fuliza visibility** — tracks your Fuliza overdraft balance, daily maintenance fees, and auto-repayments so nothing is hidden
+
+---
+
+## Your data never leaves your phone
+
+> **Hali Mfukoni reads your M-Pesa SMS messages only on your device. Your messages are never uploaded, shared, or sent anywhere.** There are no servers, no cloud sync, and no accounts to create. Everything — every transaction, every balance, every goal — is stored in a local SQLite database on your phone and stays there.
+
+This is not a policy promise that can change. It is the architecture. The app has no network calls and no backend.
+
+---
+
+## Fully open source
+
+Hali Mfukoni is released under the MIT licence. Read every line of code, fork it, build on it, or audit it yourself. If the app asks for SMS permission, you can verify exactly what it does with that permission by reading [`src/sms/scanner.ts`](src/sms/scanner.ts) and [`src/sms/parser.ts`](src/sms/parser.ts).
+
+---
+
+## Screenshots
+
+| Home | Transactions | Stats |
+|------|-------------|-------|
+| <img src="docs/screenshots/home.png" width="200"/> | <img src="docs/screenshots/list.png" width="200"/> | <img src="docs/screenshots/stats.png" width="200"/> |
+
+| Goals | Trophies | Detail |
+|-------|----------|--------|
+| <img src="docs/screenshots/goals.png" width="200"/> | <img src="docs/screenshots/trophies.png" width="200"/> | <img src="docs/screenshots/detail.png" width="200"/> |
+
+---
+
+## Install
+
+Download the latest APK from [Releases](https://github.com/JamesOmare/HaliMfukoni/releases) and install it directly on your Android phone.
+
+You may need to allow **"Install from unknown sources"** in Settings → Security the first time.
+
+**Required permissions:**
+- `READ_SMS` — to scan your M-Pesa messages (never leaves your device)
+- `RECEIVE_SMS` — to catch new M-Pesa messages in real time
+
+---
+
+## Build from source
 
 ```bash
-# using npm
-npm start
+# Clone
+git clone https://github.com/JamesOmare/HaliMfukoni.git
+cd HaliMfukoni
 
-# OR using Yarn
-yarn start
-```
+# Install dependencies
+npm install
 
-## Step 2: Start your Application
-
-Let Metro Bundler run in its _own_ terminal. Open a _new_ terminal from the _root_ of your React Native project. Run the following command to start your _Android_ or _iOS_ app:
-
-### For Android
-
-```bash
-# using npm
+# Run on Android (debug, needs Metro running)
 npm run android
 
-# OR using Yarn
-yarn android
+# Build a standalone release APK
+cd android && ./gradlew assembleRelease
+# APK → android/app/build/outputs/apk/release/app-release.apk
 ```
 
-### For iOS
+Requires Node 18+, Java 17, and Android SDK with build-tools installed.
 
-```bash
-# using npm
-npm run ios
+---
 
-# OR using Yarn
-yarn ios
-```
+## Tech stack
 
-If everything is set up _correctly_, you should see your new app running in your _Android Emulator_ or _iOS Simulator_ shortly provided you have set up your emulator/simulator correctly.
+| Layer | Choice |
+|-------|--------|
+| Framework | React Native 0.76 |
+| Language | TypeScript |
+| Database | SQLite via `op-sqlite` |
+| State | Zustand |
+| Typography | Space Grotesk |
+| Charts | Custom SVG (react-native-svg) |
 
-This is one way to run your app — you can also run it directly from within Android Studio and Xcode respectively.
+---
 
-## Step 3: Modifying your App
+## Contributing
 
-Now that you have successfully run the app, let's modify it.
+PRs welcome. If you find a pattern of M-Pesa SMS that the parser doesn't handle, open an issue with a (redacted) example message and it'll be added.
 
-1. Open `App.tsx` in your text editor of choice and edit some lines.
-2. For **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Developer Menu** (<kbd>Ctrl</kbd> + <kbd>M</kbd> (on Window and Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (on macOS)) to see your changes!
+---
 
-   For **iOS**: Hit <kbd>Cmd ⌘</kbd> + <kbd>R</kbd> in your iOS Simulator to reload the app and see your changes!
+## Licence
 
-## Congratulations! :tada:
-
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [Introduction to React Native](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you can't get this to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+MIT — free to use, modify, and distribute.
