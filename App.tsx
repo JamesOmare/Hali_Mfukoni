@@ -1,118 +1,108 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
+import React, { useEffect, useState } from 'react';
+import { StatusBar } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { Colors } from './src/theme/tokens';
+import { migrate } from './src/db/schema';
+import { useTransactionStore } from './src/store/useTransactionStore';
+import { useGoalStore } from './src/store/useGoalStore';
+import { useTrophyStore } from './src/store/useTrophyStore';
+import { useFulizaStore } from './src/store/useFulizaStore';
+import { useMerchantRulesStore } from './src/store/useMerchantRulesStore';
+import { AppNavigator } from './src/navigation/AppNavigator';
+import { OnboardingScreen } from './src/screens/OnboardingScreen';
+import { checkSmsPermission, scanInbox } from './src/sms/scanner';
+import { startSmsListener } from './src/sms/listener';
 
-import React from 'react';
-import type {PropsWithChildren} from 'react';
-import {
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from 'react-native';
+const ONBOARDED_KEY = 'hm_onboarded';
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
+export default function App() {
+  const [ready, setReady] = useState(false);
+  const [onboarded, setOnboarded] = useState(true);
 
-type SectionProps = PropsWithChildren<{
-  title: string;
-}>;
+  const loadTx = useTransactionStore(s => s.load);
+  const loadGoals = useGoalStore(s => s.load);
+  const loadTrophies = useTrophyStore(s => s.load);
+  const loadFuliza = useFulizaStore(s => s.load);
+  const loadRules  = useMerchantRulesStore(s => s.load);
+  const transactions = useTransactionStore(s => s.transactions);
+  const streak = useTransactionStore(s => s.streak);
+  const weekTx = useTransactionStore(s => s.weekTx);
+  const refresh = useTrophyStore(s => s.refresh);
+  const weeklyGoal = useGoalStore(s => s.weekly);
 
-function Section({children, title}: SectionProps): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-  return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
-    </View>
-  );
-}
+  useEffect(() => {
+    const init = async () => {
+      // 1. Set up database
+      await migrate();
 
-function App(): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
+      // 2. Load all stored data
+      await Promise.all([loadGoals(), loadTx(), loadTrophies(), loadFuliza(), loadRules()]);
 
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
+      // 3. Check onboarding state
+      const ob = await AsyncStorage.getItem(ONBOARDED_KEY);
+      if (!ob) {
+        // Never onboarded — check if permission was somehow already granted
+        const hasPerm = await checkSmsPermission();
+        if (hasPerm) {
+          // Permission exists, scan and mark as onboarded
+          await scanInbox();
+          await loadTx();
+          await AsyncStorage.setItem(ONBOARDED_KEY, '1');
+          setOnboarded(true);
+        } else {
+          setOnboarded(false);
+        }
+      } else {
+        // Already onboarded — show UI immediately, scan in background
+        const hasPerm = await checkSmsPermission();
+        if (hasPerm) {
+          // Don't await — let UI render first, scan runs in background
+          scanInbox().then(result => {
+            if (result.inserted > 0) loadTx();
+          });
+        }
+      }
+
+      // 4. Start real-time listener for new M-Pesa messages
+      startSmsListener(async () => {
+        await loadTx();
+      });
+
+      setReady(true);
+    };
+    init();
+  }, []);
+
+  // Refresh trophies whenever transactions change
+  useEffect(() => {
+    if (transactions.length === 0) return;
+    const week = weekTx();
+    const weekSpent = week.filter(t => t.amount < 0).reduce((s, t) => s + Math.abs(t.amount), 0);
+    refresh(
+      transactions.map(t => ({ amount: t.amount, dateIso: t.dateIso, time: t.time, subType: t.subType })),
+      streak(),
+      weekSpent,
+      weeklyGoal,
+    );
+  }, [transactions.length]);
+
+  const handleOnboarded = async () => {
+    await AsyncStorage.setItem(ONBOARDED_KEY, '1');
+    await loadTx();
+    setOnboarded(true);
   };
 
+  if (!ready) return null;
+
   return (
-    <SafeAreaView style={backgroundStyle}>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundStyle.backgroundColor}
-      />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+    <SafeAreaProvider>
+      <StatusBar barStyle="dark-content" backgroundColor={Colors.canvas} />
+      <SafeAreaView style={{ flex: 1, backgroundColor: Colors.canvas }}>
+        {!onboarded
+          ? <OnboardingScreen onDone={handleOnboarded} />
+          : <AppNavigator />}
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-  },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
-  },
-  highlight: {
-    fontWeight: '700',
-  },
-});
-
-export default App;
